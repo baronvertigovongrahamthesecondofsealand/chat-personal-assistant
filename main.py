@@ -1,14 +1,16 @@
 #!/usr/bin/python3
 
+config_wakeword = ["hey computer"]
+config_sleepword = ["never mind", "nevermind", "disregard"]
+
 import os
 import sys
 import time
 import json
-import numpy as np
 
 import openai
 openai.organization = "org-v5F069xxdH5brHPa73p9sZkQ"
-openai.api_key = "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"
+openai.api_key = os.getenv('OPENAI_API_KEY')
 #model_name = "gpt-3.5-turbo"
 model_name = "babbage"
 
@@ -24,18 +26,13 @@ voice = engine.getProperty('voices')[0]
 engine.setProperty('voice', voice.id)
 
 import pygame
-from io import BytesIO
-from gtts import gTTS
-mp3_buffer = BytesIO()
 pygame.mixer.init()
 
-greetings = [
-    "greetings",
-    "unit online",
-    "i am here"
-]
+from io import BytesIO
+from gtts import gTTS
 
 def text_to_voice_gtts(text):
+    mp3_buffer = BytesIO()
     tts = gTTS(text)
     tts.write_to_fp(mp3_buffer)
     mp3_buffer.seek(0)
@@ -51,12 +48,12 @@ def text_to_voice(text):
     text_to_voice_gtts(text)
 
 def play_sound(type):
-    sound_filename = "computer_" + type + ".mp3"
+    sound_filename = "samples/computer_" + type + ".mp3"
     pygame.mixer.music.load(sound_filename)
     pygame.mixer.music.play()
 
 def listen():
-    with sr.Microphone() as source:
+    with sr.Microphone(chunk_size=8192) as source:
         r.adjust_for_ambient_noise(source)
         audio = r.listen(source)
 
@@ -74,14 +71,13 @@ def listen_for_wake_word():
 
         try:
             text = listen()
-            print(text)
+            print('>>> ' + text)
         except sr.UnknownValueError:
             pass
 
-        if "hey computer" in text.lower():
-            print("- waking up")
-
+        if text.lower() in config_wakeword:
             play_sound('wakeup')
+            print("- waking up")
 
             listen_and_respond()
             break
@@ -90,26 +86,33 @@ def listen_and_respond():
     print("- listening for statement...")
 
     while True:
-        text =  ""
+        text = ""
 
         try:
             text = listen()
+            print('>>> ' + text)
 
         except sr.UnknownValueError as e:
-            time.sleep(2)
+            play_sound('error')
             print("- back to sleep...")
+            time.sleep(2)
             listen_for_wake_word()
             break
 
         if not text:
             continue
 
-        print("request: " + text)
+        if text.lower() in config_sleepword:
+            play_sound('accepted')
+            print("- back to sleep...")
+            time.sleep(2)
+            listen_for_wake_word()
+            break
 
         play_sound('processing')
+        print("request: " + text)
 
         try:
-            # Send input to OpenAI API
             response = openai.ChatCompletion.create(model=model_name, messages=[{"role": "user", "content": text}])
             response_text = response.choices[0].message.content
         except openai.error.RateLimitError as e:
