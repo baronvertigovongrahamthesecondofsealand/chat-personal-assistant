@@ -1,5 +1,4 @@
 # chat-personal-assistant
---- Chat Personal Assistant (alpha) ---
 
 This is a voice assistant that listens for a keyword, responds with beeps and boops, then listens for your queries to pass on the (currently) the OpenAI API. It then  speaks the result.
 
