@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-config_wakeword = ["hey computer"]
+config_wakeword = ["hey computer", "a computer", "say computer"]
 config_sleepword = ["never mind", "nevermind", "disregard"]
 
 import os
@@ -9,7 +9,7 @@ import time
 import json
 
 import openai
-openai.organization = "org-v5F069xxdH5brHPa73p9sZkQ"
+openai.organization = os.getenv("OPEN_API_ORG")
 openai.api_key = os.getenv('OPENAI_API_KEY')
 #model_name = "gpt-3.5-turbo"
 model_name = "babbage"
@@ -47,6 +47,7 @@ def text_to_voice_pyttsx3(text):
 def text_to_voice(text):
     text_to_voice_gtts(text)
 
+
 def play_sound(type):
     sound_filename = "samples/computer_" + type + ".mp3"
     pygame.mixer.music.load(sound_filename)
@@ -78,8 +79,13 @@ def listen_for_wake_word():
         if text.lower() in config_wakeword:
             play_sound('wakeup')
             print("- waking up")
-
             listen_and_respond()
+            break
+
+        if text.lower() in config_sleepword:
+            play_sound('accepted')
+            print("- back to sleep...")
+            listen_for_wake_word()
             break
 
 def listen_and_respond():
@@ -95,7 +101,6 @@ def listen_and_respond():
         except sr.UnknownValueError as e:
             play_sound('error')
             print("- back to sleep...")
-            time.sleep(2)
             listen_for_wake_word()
             break
 
@@ -105,7 +110,6 @@ def listen_and_respond():
         if text.lower() in config_sleepword:
             play_sound('accepted')
             print("- back to sleep...")
-            time.sleep(2)
             listen_for_wake_word()
             break
 
