@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-config_wakeword = ["hey computer", "a computer", "say computer"]
-config_sleepword = ["never mind", "nevermind", "disregard"]
+config_wakeword  = ["hey computer", "a computer", "say computer"]
+config_sleepword = ["never mind", "nevermind", "disregard", "thank you"]
+config_stopword = ["break", "thats enough", "stop"]
 
 import os
 import sys
@@ -11,8 +12,7 @@ import json
 import openai
 openai.organization = os.getenv("OPEN_API_ORG")
 openai.api_key = os.getenv('OPENAI_API_KEY')
-#model_name = "gpt-3.5-turbo"
-model_name = "babbage"
+model_name = "gpt-3.5-turbo"
 
 import speech_recognition as sr
 r = sr.Recognizer()
@@ -31,6 +31,9 @@ pygame.mixer.init()
 from io import BytesIO
 from gtts import gTTS
 
+in_conversation = False
+block_input = False
+
 def text_to_voice_gtts(text):
     mp3_buffer = BytesIO()
     tts = gTTS(text)
@@ -40,13 +43,15 @@ def text_to_voice_gtts(text):
     pygame.mixer.music.load(mp3_buffer)
     pygame.mixer.music.play()
 
+    while wait_for_interrupt() and wait_for_speaking() == True:
+        continue
+
 def text_to_voice_pyttsx3(text):
     engine.say(text)
     engine.runAndWait()
 
 def text_to_voice(text):
     text_to_voice_gtts(text)
-
 
 def play_sound(type):
     sound_filename = "samples/computer_" + type + ".mp3"
@@ -64,7 +69,27 @@ def listen():
 
     return text
 
-def listen_for_wake_word():
+def wait_for_speaking():
+    return pygame.mixer.music.get_busy() == True
+
+def wait_for_interrupt():
+    text = ""
+
+    try:
+        text = listen()
+        print('>>> ' + text)
+    except sr.UnknownValueError:
+        pass
+
+    if text.lower() in config_stopword:
+        pygame.mixer.music.stop()
+        play_sound('accepted')
+        print("- interrupted...")
+        return 1
+
+    return 0
+
+def wait_for_wakeup():
     print("- listening for keyword...")
 
     while True:
@@ -79,17 +104,10 @@ def listen_for_wake_word():
         if text.lower() in config_wakeword:
             play_sound('wakeup')
             print("- waking up")
-            listen_and_respond()
-            break
+            wait_for_query()
 
-        if text.lower() in config_sleepword:
-            play_sound('accepted')
-            print("- back to sleep...")
-            listen_for_wake_word()
-            break
-
-def listen_and_respond():
-    print("- listening for statement...")
+def wait_for_query():
+    print("- listening for query...")
 
     while True:
         text = ""
@@ -101,7 +119,7 @@ def listen_and_respond():
         except sr.UnknownValueError as e:
             play_sound('error')
             print("- back to sleep...")
-            listen_for_wake_word()
+            # listen_for_wake_word()
             break
 
         if not text:
@@ -110,34 +128,31 @@ def listen_and_respond():
         if text.lower() in config_sleepword:
             play_sound('accepted')
             print("- back to sleep...")
-            listen_for_wake_word()
+            # listen_for_wake_word()
             break
 
         play_sound('processing')
         print("request: " + text)
 
+        wrapped_text = "in as few words as possible, " + text
+
         try:
-            response = openai.ChatCompletion.create(model=model_name, messages=[{"role": "user", "content": text}])
+            response = openai.ChatCompletion.create(model=model_name, messages=[{"role": "user", "content": wrapped_text}])
             response_text = response.choices[0].message.content
         except openai.error.RateLimitError as e:
             play_sound('error')
             print("!!! openai exception: " + e.user_message)
             text_to_voice("open ai exception: " + e.user_message)
-            listen_for_wake_word()
+            print("- back to sleep...")
+            # listen_for_wake_word()
             break
 
-        if not text:
-            continue
-
-        print("chatgpt response: " + response_text)
-
-        text_to_voice(response_text)
-
-        time.sleep(2)
-        listen_for_wake_word()
+        if text and response_text:
+            print("chatgpt response: " + response_text)
+            text_to_voice(response_text)
 
 def main():
-    listen_for_wake_word()
+    wait_for_wakeup()
 
 if __name__ == '__main__':
     try:
