@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 
-config_wakeword  = ["hey computer", "a computer", "say computer"]
-config_sleepword = ["never mind", "nevermind", "disregard", "thank you"]
-config_stopword = ["break", "thats enough", "stop"]
+config_wakeword     = ["hey computer", "a computer", "say computer", "computer i have a question", "computer, i have a question", "wake up computer", "wake up, computer"]
+config_sleepword    = ["thats all", "that's all", "thank you", "go back to sleep", "thats enough for now", "that's enough for now", "thats all for now", "that's all for now"]
+config_stopword     = ["end query", "never mind query", "nevermind query", "disregard query", "break query", "stop query"]
+config_detailword   = ["in detail"]
 
 import os
 import sys
-import time
 import json
 
 import openai
@@ -20,10 +20,10 @@ r = sr.Recognizer()
 from vosk import SetLogLevel
 SetLogLevel(-1) # Hide Vosk logs
 
-import pyttsx3
-engine = pyttsx3.init()
-voice = engine.getProperty('voices')[0]
-engine.setProperty('voice', voice.id)
+# import pyttsx3
+# engine = pyttsx3.init()
+# voice = engine.getProperty('voices')[0]
+# engine.setProperty('voice', voice.id)
 
 import pygame
 pygame.mixer.init()
@@ -31,27 +31,28 @@ pygame.mixer.init()
 from io import BytesIO
 from gtts import gTTS
 
-in_conversation = False
-block_input = False
+# in_conversation = False
 
 def text_to_voice_gtts(text):
     mp3_buffer = BytesIO()
-    tts = gTTS(text)
+    tts = gTTS(text=text, lang="uk", slow=False)
     tts.write_to_fp(mp3_buffer)
     mp3_buffer.seek(0)
 
     pygame.mixer.music.load(mp3_buffer)
     pygame.mixer.music.play()
 
-    while wait_for_interrupt() and wait_for_speaking() == True:
+    while wait_for_interrupt() and wait_for_speaking():
         continue
 
-def text_to_voice_pyttsx3(text):
-    engine.say(text)
-    engine.runAndWait()
+# def text_to_voice_pyttsx3(text):
+#     engine.setProperty('voice', 'english')  # changes the voice
+#     engine.say(text)
+#     engine.runAndWait()
 
 def text_to_voice(text):
     text_to_voice_gtts(text)
+    # text_to_voice_pyttsx3(text)
 
 def play_sound(type):
     sound_filename = "samples/computer_" + type + ".mp3"
@@ -60,66 +61,67 @@ def play_sound(type):
 
 def listen():
     with sr.Microphone(chunk_size=8192) as source:
-        r.adjust_for_ambient_noise(source)
-        audio = r.listen(source)
+        try:
+            r.adjust_for_ambient_noise(source)
+            audio = r.listen(source, 10, 3)
+        except sr.WaitTimeoutError:
+            return ""
 
     # text = r.recognize_google(audio)
-
     text = json.loads(r.recognize_vosk(audio, 'en'))['text']
 
     return text
 
 def wait_for_speaking():
-    return pygame.mixer.music.get_busy() == True
+    return pygame.mixer.music.get_busy()
 
 def wait_for_interrupt():
     text = ""
 
     try:
         text = listen()
-        print('>>> ' + text)
+        # print('>>>: ' + text)
     except sr.UnknownValueError:
-        pass
+        return True
 
     if text.lower() in config_stopword:
         pygame.mixer.music.stop()
         play_sound('accepted')
         print("- interrupted...")
-        return 1
+        return False
 
-    return 0
+    return True
 
 def wait_for_wakeup():
-    print("- listening for keyword...")
+    print("- listening for wake word...")
 
     while True:
         text = ""
 
         try:
             text = listen()
-            print('>>> ' + text)
+            # print('>>> ' + text)
         except sr.UnknownValueError:
             pass
 
         if text.lower() in config_wakeword:
-            play_sound('wakeup')
             print("- waking up")
             wait_for_query()
 
 def wait_for_query():
-    print("- listening for query...")
-
     while True:
+        print("- listening for query...")
+        play_sound('wakeup')
+
         text = ""
 
         try:
             text = listen()
-            print('>>> ' + text)
+            # print('>>> ' + text)
 
         except sr.UnknownValueError as e:
             play_sound('error')
             print("- back to sleep...")
-            # listen_for_wake_word()
             break
 
         if not text:
@@ -128,15 +130,30 @@ def wait_for_query():
         if text.lower() in config_sleepword:
             play_sound('accepted')
             print("- back to sleep...")
-            # listen_for_wake_word()
             break
 
-        play_sound('processing')
-        print("request: " + text)
+        stophere = False
 
-        wrapped_text = "in as few words as possible, " + text
+        for stopword in config_stopword:
+            if stopword in text.lower():
+                play_sound('accepted')
+                stophere = True
+                break
+
+        if stophere:
+            continue
+
+        wrapped_text = "concisely answer the following: " + text
+
+        for detailword in config_detailword:
+            if detailword in text.lower():
+                wrapped_text = "answer the following: " + text
+
+        play_sound('processing')
+        print("- query detected: " + text)
 
         try:
+            print('- sending to chatgpt: "' + wrapped_text+'"')
             response = openai.ChatCompletion.create(model=model_name, messages=[{"role": "user", "content": wrapped_text}])
             response_text = response.choices[0].message.content
         except openai.error.RateLimitError as e:
@@ -144,11 +161,16 @@ def wait_for_query():
             print("!!! openai exception: " + e.user_message)
             text_to_voice("open ai exception: " + e.user_message)
             print("- back to sleep...")
-            # listen_for_wake_word()
+            break
+        except openai.error.APIConnectionError as e:
+            play_sound('error')
+            print("!!! openai exception: " + e.user_message)
+            text_to_voice("open ai exception: " + e.user_message)
+            print("- back to sleep...")
             break
 
         if text and response_text:
-            print("chatgpt response: " + response_text)
+            print("- chatgpt response: " + response_text)
             text_to_voice(response_text)
 
 def main():
