@@ -1,2 +1,4 @@
 model
 test_*
+history.log
+error.log

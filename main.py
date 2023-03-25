@@ -31,11 +31,15 @@ pygame.mixer.init()
 from io import BytesIO
 from gtts import gTTS
 
+chat_history_file = "history.log"
+f = open(chat_history_file, "a")
+f.close()
+
 # in_conversation = False
 
 def text_to_voice_gtts(text):
     mp3_buffer = BytesIO()
-    tts = gTTS(text=text, lang="uk", slow=False)
+    tts = gTTS(text=text, lang="en", slow=False)
     tts.write_to_fp(mp3_buffer)
     mp3_buffer.seek(0)
 
@@ -143,7 +147,10 @@ def wait_for_query():
         if stophere:
             continue
 
-        wrapped_text = "concisely answer the following: " + text
+        f = open(chat_history_file, "r")
+        chat_history = f.read()
+        print(chat_history)
+        wrapped_text = chat_history + "concisely answer the following: " + text
 
         for detailword in config_detailword:
             if detailword in text.lower():
@@ -170,6 +177,10 @@ def wait_for_query():
             break
 
         if text and response_text:
+            f = open(chat_history_file, "a")
+            f.write("user: " + text + "\n")
+            f.write("chatgpt: " + response_text + "\n")
+            f.close()
             print("- chatgpt response: " + response_text)
             text_to_voice(response_text)
 
