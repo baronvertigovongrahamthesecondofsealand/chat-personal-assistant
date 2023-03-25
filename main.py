@@ -6,6 +6,8 @@ config_stopword     = ["end query", "never mind query", "nevermind query", "disr
 config_detailword   = ["in detail"]
 
 import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
 import sys
 import json
 
@@ -185,7 +187,24 @@ def wait_for_query():
             print("- chatgpt response: " + response_text)
             text_to_voice(response_text)
 
+def intro():
+    print("-- chat personal assistant --")
+    print()
+    print("wake words: use these to wake up the assistant from ignoring input")
+    print(config_wakeword)
+    print()
+    print("stop words: use these to interrupt a response or break from input")
+    print(config_stopword)
+    print()
+    print("detail words: use these before a query to get more detailed answers, defaults to concise responses")
+    print(config_detailword)
+    print()
+    print("sleep words: use these to put the assistant back into idle")
+    print(config_sleepword)
+    print()
+
 def main():
+    intro()
     wait_for_wakeup()
 
 if __name__ == '__main__':
