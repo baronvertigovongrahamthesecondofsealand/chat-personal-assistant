@@ -14,7 +14,10 @@ Libs:
 - pygame: For the audio output
 
 Install:
-- tba
+- set up an openai api key, save this and your openai api org (found in your profile) to .bash_profile using var names
+  - OPEN_API_ORG
+  - OPEN_API_KEY
+- run: pip install openai python-dotenv speech_reognition pyttsx3 gtts vosk pygame
 
 Usage:
 
