@@ -2,6 +2,8 @@
 
 This is a voice assistant that listens for a keyword, responds with beeps and boops, then listens for your queries to pass on the (currently) the OpenAI API. It then  speaks the result.
 
+Inspiration from https://github.com/Infatoshi/chatgpt-voice-assistant - thanks!
+
 Libs:
 - speech_recognition: For speech-to-text capabilities. This can be configured to use a variety of engines.
   - vosk: Engine currently in use for speech-to-text.
