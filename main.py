@@ -10,9 +10,10 @@ import sys
 import json
 
 import openai
-openai.organization = os.getenv("OPEN_API_ORG")
-openai.api_key = os.getenv('OPENAI_API_KEY')
 model_name = "gpt-3.5-turbo"
+# set the following in .bash_profile
+openai.organization = os.getenv("OPEN_API_ORG")
+openai.api_key = os.getenv('OPENAI_API_KEY')        # set in .bash_profile
 
 import speech_recognition as sr
 r = sr.Recognizer()
@@ -35,7 +36,7 @@ chat_history_file = "history.log"
 f = open(chat_history_file, "a")
 f.close()
 
-# in_conversation = False
+# ------------------------------------------------------
 
 def text_to_voice_gtts(text):
     mp3_buffer = BytesIO()
