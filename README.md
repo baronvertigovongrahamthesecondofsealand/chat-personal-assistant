@@ -5,19 +5,21 @@ This is a voice assistant that listens for a keyword, responds with beeps and bo
 Inspiration from https://github.com/Infatoshi/chatgpt-voice-assistant - thanks!
 
 Libs:
-- speech_recognition: For speech-to-text capabilities. This can be configured to use a variety of engines.
-  - vosk: Engine currently in use for speech-to-text.
-  - google: Can be used instead of vosk.
-- openai: For getting an intelligent response to your query from a higher power.
-- gTTS: Currently using this for text-to-speech of the query response.
-- pyttsx3: Can be used instead of gTTS.
+- whisper: Voice recognition. Hosted locally, great quality, fast. Default.
+- speech_recognition: Voice recognition. This can be configured to use a variety of engines.
+  - vosk: A good quality voice recognition engine, hosted locally, fairly fast.
+  - google: Can be used instead of vosk. High quality, but uses an external service. Slow.
+- openai: For getting an intelligent response to your query from a higher power. External service - if I could run locally, I would!
+- mimic3: Text-to-speech, hosted locally, wonderful quality. Default.
+- gTTS: Text-to-speech of the query response. High quality, but uses external service.
+- pyttsx3: Text-to-speech, hosted locally, terrible quality!
 - pygame: For the audio output
 
 Install:
 - set up an openai api key, save this and your openai api org (found in your profile) to .bash_profile using var names
   - OPEN_API_ORG
   - OPEN_API_KEY
-- run: pip install openai python-dotenv speech_reognition pyttsx3 gtts vosk pygame
+- run: pip install openai python-dotenv speech_reognition pyttsx3 gtts vosk pygame whisper mycroft-mimic3-tts
 
 Usage:
 
